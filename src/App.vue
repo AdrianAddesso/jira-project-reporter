@@ -1,7 +1,7 @@
 <script setup>
-import HelloWorld from './components/APITest.vue'
+import Report from './components/Report.vue'
 </script>
 
 <template>
-  <HelloWorld />
+    <Report />
 </template>
