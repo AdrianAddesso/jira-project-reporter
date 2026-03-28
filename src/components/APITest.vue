@@ -1,20 +1,3 @@
-<script setup>
-import { useProjectsStore } from '@/stores/projectsStore'
-import { onMounted } from 'vue'
-
-const store = useProjectsStore()
-
-onMounted(() => {
-  store.fetchProjectData('KAN')
-})
-
-function formatTime(seconds) {
-  if (!seconds) return '-'
-  const hours = Math.floor(seconds / 3600)
-  return `${hours}h`
-}
-</script>
-
 <template>
   <div class="container mt-4">
     <h3>Gestión de Proyecto</h3>
@@ -29,7 +12,6 @@ function formatTime(seconds) {
       <div class="card-body">
         <h5 class="card-title">{{ store.projectDetails.name }}</h5>
         <p class="card-text">Clave: {{ store.projectDetails.key }}</p>
-        <p>Líder: {{ store.projectDetails.lead.displayName }}</p>
       </div>
     </div>
 
@@ -41,7 +23,7 @@ function formatTime(seconds) {
       {{ store.loadingIssues ? 'Cargando...' : 'Ver issues bloqueadas' }}
     </button>
 
-    <table v-if="store.blockedIssues.length" class="table table-bordered">
+    <table v-if="store.blockedIssues.length" class="table table-bordered mx-auto">
       <thead class="table-dark">
         <tr>
           <th>Key</th>
@@ -63,3 +45,20 @@ function formatTime(seconds) {
     </p>
   </div>
 </template>
+
+<script setup>
+    import { useProjectsStore } from '@/stores/projectsStore'
+    import { onMounted } from 'vue'
+
+    const store = useProjectsStore()
+
+    onMounted(() => {
+    store.fetchProjectData('KAN')
+    })
+
+    function formatTime(seconds) {
+    if (!seconds) return '-'
+    const hours = Math.floor(seconds / 3600)
+    return `${hours}h`
+    }
+</script>
