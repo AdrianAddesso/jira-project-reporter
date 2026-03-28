@@ -3,30 +3,57 @@ import axios from "axios";
 
 export const useProjectsStore = defineStore("projects", {
     state: () => ({
+        // Estados generales
         projectDetails: null,
-        reportIssues: [], // Raw issues for all KPIs
+        reportIssues: [],
+        blockedIssues: [],
         loading: false,
+        loadingIssues: false,
         error: null,
     }),
 
     actions: {
+        // Helper para generar el header de autorización
+        getAuthHeader() {
+        const email = import.meta.env.VITE_JIRA_EMAIL;
+        const token = import.meta.env.VITE_JIRA_API_TOKEN;
+        return {
+            Authorization: `Basic ${btoa(`${email}:${token}`)}`,
+            Accept: "application/json",
+        };
+        },
+
+        // CASO: Datos básicos del proyecto (Nombre, Key, etc.)
+        async fetchProjectData(projectKey) {
+        this.loading = true;
+        this.error = null;
+        try {
+            const response = await axios.get(
+            `/api-jira/rest/api/3/project/${projectKey}`,
+            {
+                headers: this.getAuthHeader(),
+            },
+            );
+            this.projectDetails = response.data;
+        } catch (err) {
+            this.error = "Error al obtener el proyecto: " + err.message;
+            console.error(err);
+        } finally {
+            this.loading = false;
+        }
+        },
+
+        // CASO: Carga masiva para Reportes y KPIs
         async fetchReportData(projectKey) {
         this.loading = true;
         this.error = null;
 
-        const auth = btoa(
-            `${import.meta.env.VITE_JIRA_EMAIL}:${import.meta.env.VITE_JIRA_API_TOKEN}`,
-        );
-
-        // JQL to bring all necessary issues for the tables
-        const jql = `project = "${projectKey}" AND (issuetype IN (Bug, Task, Story) OR status IN ("QA", "Ready for Prod", "QA Failed"))`;
+        // JQL que abarca Bugs, Tasks, Stories y estados críticos
+        const jql = `project = "${projectKey}" AND (issuetype IN (Bug, Task, Story) OR status IN ("QA", "Ready for Prod", "QA Failed", "Blocked"))`;
 
         try {
             const response = await axios.get(`/api-jira/rest/api/3/search`, {
-            headers: {
-                Authorization: `Basic ${auth}`,
-                Accept: "application/json",
-            },
+            headers: this.getAuthHeader(),
             params: {
                 jql,
                 maxResults: 1000,
@@ -44,24 +71,32 @@ export const useProjectsStore = defineStore("projects", {
             },
             });
             this.reportIssues = response.data.issues;
+            // Sincronizamos blockedIssues filtrando del reporte global
+            this.blockedIssues = this.reportIssues.filter(
+            (i) => i.fields.status.name === "Blocked",
+            );
         } catch (err) {
-            this.error = "Error fetching report data: " + err.message;
+            this.error = "Error en el reporte: " + err.message;
         } finally {
             this.loading = false;
         }
         },
+
+        // Mantenemos esta por compatibilidad con tu botón anterior
+        async fetchBlockedIssues(projectKey) {
+        await this.fetchReportData(projectKey);
+        },
     },
 
     getters: {
-        // Table 1: Est vs Spent per User (Last 7 days)
+        // Tabla 1: Est vs Spent por Usuario (Últimos 7 días)
         userTimeStats: (state) => {
         const lastWeek = new Date();
         lastWeek.setDate(lastWeek.getDate() - 7);
-
         const stats = {};
         state.reportIssues.forEach((issue) => {
             const updated = new Date(issue.fields.updated);
-            const user = issue.fields.assignee?.displayName || "Unassigned";
+            const user = issue.fields.assignee?.displayName || "Sin Asignar";
             if (updated >= lastWeek) {
             if (!stats[user]) stats[user] = { estimated: 0, spent: 0 };
             stats[user].estimated += issue.fields.customfield_10043 || 0;
@@ -71,7 +106,7 @@ export const useProjectsStore = defineStore("projects", {
         return stats;
         },
 
-        // Table 2 & 3: Simple Status Counts
+        // Tablas 2 y 3: Conteos de Status
         qaCount: (state) =>
         state.reportIssues.filter((i) => i.fields.status.name === "QA").length,
         readyForProdCount: (state) =>
@@ -79,7 +114,7 @@ export const useProjectsStore = defineStore("projects", {
             (i) => i.fields.status.name === "Ready for Prod",
         ).length,
 
-        // Table 4: Bug Rate KPI
+        // Tabla 4: Bug Rate
         bugRate: (state) => {
         const bugs = state.reportIssues.filter(
             (i) => i.fields.issuetype.name === "Bug",
@@ -91,7 +126,7 @@ export const useProjectsStore = defineStore("projects", {
         return totalSpent > 0 ? (bugs.length / totalSpent).toFixed(2) : 0;
         },
 
-        // Table 5: Defect Escape Rate
+        // Tabla 5: Defect Escape Rate
         defectEscapeRate: (state) => {
         const totalBugs = state.reportIssues.filter(
             (i) => i.fields.issuetype.name === "Bug",
@@ -106,42 +141,37 @@ export const useProjectsStore = defineStore("projects", {
             : "0%";
         },
 
-        // Table 6: QA Pass Rate (1st attempt)
+        // Tabla 6: QA Pass Rate
         qaPassRate: (state) => {
-        const targetTypes = state.reportIssues.filter((i) =>
+        const targets = state.reportIssues.filter((i) =>
             ["Task", "Story"].includes(i.fields.issuetype.name),
         );
-        const failed = targetTypes.filter(
+        const failed = targets.filter(
             (i) => i.fields.status.name === "QA Failed",
         ).length;
-        return targetTypes.length > 0
-            ? (((targetTypes.length - failed) / targetTypes.length) * 100).toFixed(
-                2,
-            ) + "%"
+        return targets.length > 0
+            ? (((targets.length - failed) / targets.length) * 100).toFixed(2) + "%"
             : "100%";
         },
 
-        // Table 7: Velocity (Spent per Sprint)
+        // Tabla 7: Velocity
         velocityPerSprint: (state) => {
         const sprints = {};
         state.reportIssues.forEach((issue) => {
-            const sprintData = issue.fields.customfield_10020?.[0]; // Usually an array
-            if (sprintData) {
-            const name = sprintData.name;
-            sprints[name] =
-                (sprints[name] || 0) + (issue.fields.customfield_10044 || 0);
+            const sprintName = issue.fields.customfield_10020?.[0]?.name;
+            if (sprintName) {
+            sprints[sprintName] =
+                (sprints[sprintName] || 0) + (issue.fields.customfield_10044 || 0);
             }
         });
         return sprints;
         },
 
-        // Table 8: Estimation Accuracy
+        // Tabla 8: Accuracy
         estimationAccuracy: (state) => {
         const targets = state.reportIssues.filter((i) =>
             ["Task", "Story"].includes(i.fields.issuetype.name),
         );
-        if (!targets.length) return "0%";
-
         const totalEst = targets.reduce(
             (acc, i) => acc + (i.fields.customfield_10043 || 0),
             0,
@@ -150,13 +180,12 @@ export const useProjectsStore = defineStore("projects", {
             (acc, i) => acc + (i.fields.customfield_10044 || 0),
             0,
         );
-
-        if (totalEst === 0) return "N/A";
+        if (totalEst === 0) return "0%";
         const accuracy = (1 - Math.abs(totalEst - totalSpent) / totalEst) * 100;
         return Math.max(0, accuracy).toFixed(2) + "%";
         },
 
-        // Table 9: Accumulative A vs B (Project Deviation)
+        // Tabla 9: Desvío Acumulado
         projectDeviation: (state) => {
         const totalEst = state.reportIssues.reduce(
             (acc, i) => acc + (i.fields.customfield_10043 || 0),

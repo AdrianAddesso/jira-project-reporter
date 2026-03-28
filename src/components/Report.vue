@@ -26,19 +26,45 @@
         </div>
 
         <div v-if="!store.loading && store.projectDetails" class="row g-3">
-            </div>
+        
+        <div class="col-md-3"><QATasksComponent /></div>
+        <div class="col-md-3"><ReadyForProdComponent /></div>
+        <div class="col-md-3"><BugRateComponent /></div>
+        <div class="col-md-3"><EstimationAccuracyComponent /></div>
+
+        <div class="col-lg-7"><VelocityChartComponent /></div>
+        <div class="col-lg-5"><UserTimeStatsComponent /></div>
+
+        <div class="col-md-4"><DefectEscapeRateComponent /></div>
+        <div class="col-md-4"><QAPassRateComponent /></div>
+        <div class="col-md-4"><ProjectDeviationComponent /></div>
+
+        </div>
     </div>
     </template>
 
     <script setup>
-    import { useProjectsStore } from '@/stores/projectsStore'
     import { onMounted } from 'vue'
+    import { useProjectsStore } from '@/stores/projectsStore'
+
+    /** * CORRECCIÓN DE RUTAS: 
+     * Si estos archivos están en la misma carpeta que Report.vue, usamos './Nombre.vue'
+     * Si están en una subcarpeta src/components/dashboard, usa './dashboard/Nombre.vue'
+     */
+    import UserTimeStatsComponent from './UserTimeStatsComponent.vue'
+    import QATasksComponent from './QATasksComponent.vue' 
+    import ReadyForProdComponent from './ReadyForProdComponent.vue'
+    import BugRateComponent from './BugRateComponent.vue'
+    import DefectEscapeRateComponent from './DefectEscapeRateComponent.vue'
+    import QAPassRateComponent from './QAPassRateComponent.vue'
+    import VelocityChartComponent from './VelocityChartComponent.vue'
+    import EstimationAccuracyComponent from './EstimationAccuracyComponent.vue'
+    import ProjectDeviationComponent from './ProjectDeviationComponent.vue'
 
     const store = useProjectsStore()
 
-    // Encapsulate the fetching logic
     const loadDashboard = async () => {
-    const projectKey = 'KAN' // You can make this dynamic later
+    const projectKey = 'KAN' 
     await Promise.all([
         store.fetchProjectData(projectKey),
         store.fetchReportData(projectKey)
@@ -49,5 +75,11 @@
 
     const handleRefresh = () => {
     loadDashboard()
+    }
+
+    function formatTime(seconds) {
+    if (!seconds) return '0h'
+    const hours = Math.floor(seconds / 3600)
+    return `${hours}h`
 }
 </script>
