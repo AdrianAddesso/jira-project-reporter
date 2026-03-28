@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api-jira/:path*", "destination": "/api/jira?path=/:path*" }
+  ]
+}
