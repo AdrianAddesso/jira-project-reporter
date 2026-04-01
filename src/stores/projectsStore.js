@@ -52,7 +52,7 @@ export const useProjectsStore = defineStore("projects", {
         const jql = `project = "${projectKey}" AND (issuetype IN (Bug, Task, Story) OR status IN ("QA", "Ready for Prod", "QA Failed", "Blocked"))`;
 
         try {
-            const response = await axios.get(`/api-jira/rest/api/3/search`, {
+            const response = await axios.get(`/api-jira/rest/api/3/search/jql`, {
             headers: this.getAuthHeader(),
             params: {
                 jql,
@@ -108,12 +108,12 @@ export const useProjectsStore = defineStore("projects", {
 
         // Tablas 2 y 3: Conteos de Status
         qaCount: (state) =>
-        state.reportIssues.filter((i) => i.fields.status.name === "QA").length,
+        state.reportIssues.filter((i) => i.fields.status.name === "In QA").length,
         readyForProdCount: (state) =>
         state.reportIssues.filter(
             (i) => i.fields.status.name === "Ready for Prod",
         ).length,
-
+    
         // Tabla 4: Bug Rate
         bugRate: (state) => {
         const bugs = state.reportIssues.filter(

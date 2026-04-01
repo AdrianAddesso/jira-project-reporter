@@ -1,7 +1,7 @@
 <template>
     <div class="card shadow-sm">
         <div class="card-header bg-white">
-        <h6 class="mb-0"><b>Velocity (Time Spent per Sprint)</b></h6>
+        <h6 class="mb-0 title"><b>Velocity (Time Spent per Sprint)</b></h6>
         </div>
         <div class="card-body">
         <div style="height: 300px;">
