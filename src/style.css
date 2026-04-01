@@ -294,3 +294,13 @@ code {
     border-right-color: var(--border);
   }
 }
+
+.title {
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.subtitle {
+  color: green;
+  font-size: 15px;
+}
