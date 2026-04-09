@@ -38,6 +38,7 @@
         <div class="col-md-4"><DefectEscapeRateComponent /></div>
         <div class="col-md-4"><QAPassRateComponent /></div>
         <div class="col-md-4"><ProjectDeviationComponent /></div>
+        <div class="col-md-12"><SprintSheet /></div>
 
         </div>
     </div>
@@ -60,6 +61,7 @@
     import VelocityChartComponent from './VelocityChartComponent.vue'
     import EstimationAccuracyComponent from './EstimationAccuracyComponent.vue'
     import ProjectDeviationComponent from './ProjectDeviationComponent.vue'
+    import SprintSheet from './SprintSheet.vue'
 
     const store = useProjectsStore()
 
