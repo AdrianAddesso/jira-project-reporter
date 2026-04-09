@@ -304,3 +304,10 @@ code {
   color: green;
   font-size: 15px;
 }
+
+.loader {
+    text-align: center;
+    color: #a0a0a0;
+    font-style: italic;
+    font-size: 1.1em;
+}
