@@ -1,27 +1,30 @@
 <template>
     <div class="container-fluid mt-4 px-4">
+
+        <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div v-if="store.projectDetails">
-                <h2 class="mb-0">
+                <h2 class="mb-0 fw-semibold">
                     {{ store.projectDetails.name }}
-                    <small class="text-muted fs-6">({{ store.projectDetails.key }})</small>
+                    <small class="text-muted fs-6 fw-normal ms-1">({{ store.projectDetails.key }})</small>
                 </h2>
+                <p class="text-muted small mb-0 mt-1">Panel de métricas del proyecto</p>
             </div>
 
-            <div class="d-flex gap-2">
+            <!-- Actions grouped together -->
+            <div class="d-flex gap-2 align-items-center">
                 <button
-                    class="btn btn-outline-primary d-flex align-items-center gap-2"
+                    class="btn btn-outline-secondary d-flex align-items-center gap-2"
                     @click="handleRefresh"
                     :disabled="store.loading"
                 >
                     <span v-if="store.loading" class="spinner-border spinner-border-sm"></span>
                     <span v-else>🔄</span>
-                    {{ store.loading ? 'Actualizando...' : 'Refrescar Datos' }}
+                    {{ store.loading ? 'Actualizando...' : 'Refrescar' }}
                 </button>
-            </div>
-            <div class="d-flex gap-2">
+
                 <button
-                    class="btn btn-outline-success d-flex align-items-center gap-2"
+                    class="btn btn-success d-flex align-items-center gap-2"
                     @click="exportToPDF"
                     :disabled="isExporting || store.loading"
                 >
@@ -32,27 +35,45 @@
             </div>
         </div>
 
-        <hr />
+        <hr class="mb-4" />
 
         <div v-if="store.error" class="alert alert-danger">
             {{ store.error }}
         </div>
 
-        <!-- Wrap the dashboard content in a ref so we can target it for PDF export -->
-        <div ref="reportContent" v-if="!store.loading && store.projectDetails" class="row g-3">
+        <div ref="reportContent" v-if="!store.loading && store.projectDetails">
 
-            <div class="col-md-3"><QATasksComponent /></div>
-            <div class="col-md-3"><ReadyForProdComponent /></div>
-            <div class="col-md-3"><BugRateComponent /></div>
-            <div class="col-md-3"><EstimationAccuracyComponent /></div>
+            <!-- Section 1: KPI Cards — 2 per row -->
+            <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Indicadores Clave</p>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6"><QATasksComponent /></div>
+                <div class="col-md-6"><ReadyForProdComponent /></div>
+                <div class="col-md-6"><BugRateComponent /></div>
+                <div class="col-md-6"><EstimationAccuracyComponent /></div>
+            </div>
 
-            <div class="col-lg-7"><VelocityChartComponent /></div>
-            <div class="col-lg-5"><UserTimeStatsComponent /></div>
+            <!-- Section 2: Charts — velocity wide, user stats narrow -->
+            <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Rendimiento</p>
+            <div class="row g-3 mb-4">
+                <div class="col-lg-7"><VelocityChartComponent /></div>
+                <div class="col-lg-5"><UserTimeStatsComponent /></div>
+            </div>
 
-            <div class="col-md-4"><DefectEscapeRateComponent /></div>
-            <div class="col-md-4"><QAPassRateComponent /></div>
-            <div class="col-md-4"><ProjectDeviationComponent /></div>
-            <div class="col-md-12"><SprintSheet /></div>
+            <!-- Section 3: Quality metrics — 3 equal columns -->
+            <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Calidad</p>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4"><DefectEscapeRateComponent /></div>
+                <div class="col-md-4"><QAPassRateComponent /></div>
+                <div class="col-md-4"><ProjectDeviationComponent /></div>
+            </div>
+
+            <!-- Section 4: Sprint sheet — full width, centered content -->
+            <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Sprint</p>
+            <div class="row g-3">
+                <div class="col-12 d-flex justify-content-center">
+                    <div class="w-100"><SprintSheet /></div>
+                </div>
+            </div>
 
         </div>
     </div>
