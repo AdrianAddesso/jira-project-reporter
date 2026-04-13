@@ -51,6 +51,11 @@
                 <div class="col-md-6"><BugRateComponent /></div>
                 <div class="col-md-6"><EstimationAccuracyComponent /></div>
             </div>
+            <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Sprint Activo</p>
+            <div class="row g-3 mb-4">
+                <div class="col-lg-8"><BurndownChartComponent /></div>
+                <div class="col-lg-4"><SprintHealthComponent /></div>
+            </div>
 
             <!-- Section 2: Charts — velocity wide, user stats narrow -->
             <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Rendimiento</p>
@@ -93,6 +98,8 @@ import VelocityChartComponent from './VelocityChartComponent.vue'
 import EstimationAccuracyComponent from './EstimationAccuracyComponent.vue'
 import ProjectDeviationComponent from './ProjectDeviationComponent.vue'
 import SprintSheet from './SprintSheet.vue'
+import BurndownChartComponent from './BurndownChartComponent.vue'
+import SprintHealthComponent from './SprintHealthComponent.vue'
 
 const store = useProjectsStore()
 const reportContent = ref(null)
@@ -102,7 +109,8 @@ const loadDashboard = async () => {
     const projectKey = 'KAN'
     await Promise.all([
         store.fetchProjectData(projectKey),
-        store.fetchReportData(projectKey)
+        store.fetchReportData(projectKey),
+        store.fetchSprintData(2),       // ← boardId = 2
     ])
 }
 
