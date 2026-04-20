@@ -6,7 +6,7 @@
             :class="parseFloat(store.estimationAccuracy) < 70 ? 'text-warning' : 'text-primary'">
             {{ store.estimationAccuracy }}
         </h3>
-        <p class="small mb-0 subtitle">Delta entre Est. vs Spent</p>
+        <p class="small mb-0 subtitle">Delta entre Estimadas vs Realizadas</p>
         </div>
     </div>
 </template>

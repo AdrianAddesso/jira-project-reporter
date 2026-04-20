@@ -25,12 +25,12 @@
 
                 <button
                     class="btn btn-success d-flex align-items-center gap-2"
-                    @click="exportToPDF"
+                    @click="exportToPNG"
                     :disabled="isExporting || store.loading"
                 >
                     <span v-if="isExporting" class="spinner-border spinner-border-sm"></span>
-                    <span v-else>📄</span>
-                    {{ isExporting ? 'Generando PDF...' : 'Exportar PDF' }}
+                    <span v-else>🖼️</span>
+                    {{ isExporting ? 'Generando imagen...' : 'Exportar PNG' }}
                 </button>
             </div>
         </div>
@@ -110,7 +110,7 @@ const loadDashboard = async () => {
     await Promise.all([
         store.fetchProjectData(projectKey),
         store.fetchReportData(projectKey),
-        store.fetchSprintData(2),       // ← boardId = 2
+        store.fetchSprintData(2),
     ])
 }
 
@@ -120,28 +120,32 @@ const handleRefresh = () => {
     loadDashboard()
 }
 
-const exportToPDF = async () => {
+const exportToPNG = async () => {
     if (!reportContent.value) return
 
     isExporting.value = true
 
     try {
-        // Dynamically import html2pdf to avoid SSR issues
-        const html2pdf = (await import('html2pdf.js')).default
+        const html2canvas = (await import('html2canvas')).default
 
         const projectName = store.projectDetails?.name ?? 'Reporte'
         const projectKey = store.projectDetails?.key ?? ''
-        const filename = `${projectName}_${projectKey}_${new Date().toISOString().slice(0, 10)}.pdf`
+        const filename = `${projectName}_${projectKey}_${new Date().toISOString().slice(0, 10)}.png`
 
-        const options = {
-            margin:       [10, 10, 10, 10], // top, left, bottom, right (mm)
-            filename,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        }
+        const canvas = await html2canvas(reportContent.value, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            scrollY: 0,
+            width: reportContent.value.scrollWidth,
+            height: reportContent.value.scrollHeight,
+        })
 
-        await html2pdf().set(options).from(reportContent.value).save()
+        // Dispara la descarga directamente desde el canvas
+        const link = document.createElement('a')
+        link.download = filename
+        link.href = canvas.toDataURL('image/png')
+        link.click()
     } finally {
         isExporting.value = false
     }
