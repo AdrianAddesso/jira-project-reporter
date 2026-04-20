@@ -27,61 +27,111 @@ export const useProjectsStore = defineStore("projects", {
 
     // CASO: Datos básicos del proyecto (Nombre, Key, etc.)
     async fetchProjectData(projectKey) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await axios.get(
-          `/api-jira/rest/api/3/project/${projectKey}`,
-          {
-            headers: this.getAuthHeader(),
-          },
-        );
-        this.projectDetails = response.data;
-      } catch (err) {
-        this.error = "Error al obtener el proyecto: " + err.message;
-        console.error(err);
-      } finally {
-        this.loading = false;
+        this.loading = true;
+        this.error = null;
+        try {
+            const response = await axios.get(
+            `/api-jira/rest/api/3/project/${projectKey}`,
+            {
+                headers: this.getAuthHeader(),
+            },
+            );
+            this.projectDetails = response.data;
+        } catch (err) {
+            this.error = "Error al obtener el proyecto: " + err.message;
+            console.error(err);
+        } finally {
+            this.loading = false;
       }
     },
 
     // CASO: Carga masiva para Reportes y KPIs
     async fetchReportData(projectKey) {
-      this.loading = true;
-      this.error = null;
+        this.loading = true;
+        this.error = null;
 
-      // JQL que abarca Bugs, Tasks, Stories y estados críticos
-      const jql = `project = "${projectKey}" AND (issuetype IN (Bug, Task, Story) OR status IN ("QA", "Ready for Prod", "QA Failed", "Blocked"))`;
+        const jql = `project = "${projectKey}" AND (issuetype IN (Bug, Task, Story) OR status IN ("QA", "Ready for Prod", "QA Failed", "Blocked"))`;
+        const fields = [
+            "summary",
+            "assignee",
+            "status",
+            "issuetype",
+            "updated",
+            "customfield_10043",
+            "customfield_10044",
+            "customfield_10020",
+            "customfield_10077",
+        ].join(",");
 
-      try {
-        const response = await axios.get(`/api-jira/rest/api/3/search/jql`, {
-          headers: this.getAuthHeader(),
-          params: {
-            jql,
-            maxResults: 1000,
-            fields: [
-              "summary",
-              "assignee",
-              "status",
-              "issuetype",
-              "updated",
-              "customfield_10043", // Estimation (hs)
-              "customfield_10044", // Time Spent (hs)
-              "customfield_10020", // Sprint
-              "customfield_10077", // Environment
-            ].join(","),
-          },
-        });
-        this.reportIssues = response.data.issues;
-        // Sincronizamos blockedIssues filtrando del reporte global
-        this.blockedIssues = this.reportIssues.filter(
-          (i) => i.fields.status.name === "Blocked",
-        );
-      } catch (err) {
-        this.error = "Error en el reporte: " + err.message;
-      } finally {
-        this.loading = false;
-      }
+        const PAGE_SIZE = 100; // Jira Cloud hard cap
+        let startAt = 0;
+        let allIssues = [];
+
+        try {
+            while (true) {
+            const response = await axios.get(`/api-jira/rest/api/3/search/jql`, {
+                headers: this.getAuthHeader(),
+                params: { jql, maxResults: PAGE_SIZE, startAt, fields },
+            });
+
+            const { issues, total } = response.data;
+            allIssues = allIssues.concat(issues);
+            startAt += issues.length;
+
+            // Stop when we've collected everything
+            if (startAt >= total || issues.length === 0) break;
+            }
+
+            this.reportIssues = allIssues;
+            this.blockedIssues = allIssues.filter(
+            (i) => i.fields.status.name === "Blocked",
+            );
+        } catch (err) {
+            this.error = "Error en el reporte: " + err.message;
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    async fetchSprintData(boardId = 2) {
+        try {
+            const sprintRes = await axios.get(
+            `/api-jira/rest/agile/1.0/board/${boardId}/sprint?state=active`,
+            { headers: this.getAuthHeader() },
+            );
+
+            this.activeSprint = sprintRes.data.values?.[0] ?? null;
+            if (!this.activeSprint) return;
+
+            const PAGE_SIZE = 100;
+            let startAt = 0;
+            let allIssues = [];
+
+            while (true) {
+            const issuesRes = await axios.get(
+                `/api-jira/rest/agile/1.0/sprint/${this.activeSprint.id}/issue`,
+                {
+                headers: this.getAuthHeader(),
+                params: {
+                    fields:
+                    "summary,status,assignee,issuetype,customfield_10043,customfield_10044,resolutiondate,updated",
+                    maxResults: PAGE_SIZE,
+                    startAt,
+                },
+                },
+            );
+
+            const { issues, total } = issuesRes.data;
+            allIssues = allIssues.concat(issues);
+            startAt += issues.length;
+
+            if (startAt >= total || issues.length === 0) break;
+            }
+
+            this.sprintIssues = allIssues;
+        } catch (err) {
+            this.error = "Error al obtener sprint: " + err.message;
+        }
     },
 
     // Mantenemos esta por compatibilidad con tu botón anterior
