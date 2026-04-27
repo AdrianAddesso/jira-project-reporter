@@ -111,6 +111,7 @@ const loadDashboard = async () => {
         store.fetchProjectData(projectKey),
         store.fetchReportData(projectKey),
         store.fetchSprintData(2),
+        store.fetchUserTimeStats(2),
     ])
 }
 

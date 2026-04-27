@@ -12,6 +12,7 @@ export const useProjectsStore = defineStore("projects", {
     error: null,
     activeSprint: null,
     sprintIssues: [],
+    userTimeStatsIssues: [],
   }),
 
   actions: {
@@ -152,20 +153,70 @@ export const useProjectsStore = defineStore("projects", {
         this.error = "Error al obtener sprint: " + err.message;
       }
     },
+
+    async fetchUserTimeStats(boardId = 2) {
+      try {
+        const sprintRes = await axios.get(
+          `/api-jira/rest/agile/1.0/board/${boardId}/sprint?state=active`,
+          { headers: this.getAuthHeader() },
+        );
+
+        this.activeSprint = sprintRes.data.values?.[0] ?? null;
+
+        if (!this.activeSprint) {
+          this.userTimeStatsIssues = [];
+          return;
+        }
+
+        const PAGE_SIZE = 100;
+        let startAt = 0;
+        let allIssues = [];
+
+        while (true) {
+          const issuesRes = await axios.get(
+            `/api-jira/rest/agile/1.0/sprint/${this.activeSprint.id}/issue`,
+            {
+              headers: this.getAuthHeader(),
+              params: {
+                fields: "assignee,customfield_10044",
+                maxResults: PAGE_SIZE,
+                startAt,
+              },
+            },
+          );
+
+          const { issues, total } = issuesRes.data;
+          allIssues = allIssues.concat(issues);
+          startAt += issues.length;
+
+          if (startAt >= total || issues.length === 0) break;
+        }
+
+        this.userTimeStatsIssues = allIssues;
+      } catch (err) {
+        console.log(
+          "ðŸ”´ ERROR en fetchUserTimeStats:",
+          err.message,
+          err.response?.data,
+        );
+        this.error =
+          "Error al obtener tiempos del sprint activo: " + err.message;
+      }
+    },
   },
 
-// Tabla 1: Est vs Spent por Usuario (Current Sprint)
+  getters: {
+    // Tabla 1: Spent por Usuario (Current Sprint)
     userTimeStats: (state) => {
       const stats = {};
       
-      state.sprintIssues.forEach((issue) => {
+      state.userTimeStatsIssues.forEach((issue) => {
         const user = issue.fields.assignee?.displayName || "Sin Asignar";
         
         if (!stats[user]) {
-          stats[user] = { estimated: 0, spent: 0 };
+          stats[user] = { spent: 0 };
         }
         
-        stats[user].estimated += issue.fields.customfield_10043 || 0;
         stats[user].spent += issue.fields.customfield_10044 || 0;
       });
       
