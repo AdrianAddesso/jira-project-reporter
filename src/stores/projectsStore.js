@@ -324,10 +324,12 @@ export const useProjectsStore = defineStore("projects", {
       const start = new Date(state.activeSprint.startDate);
       const end = new Date(state.activeSprint.endDate);
       const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      const chartEnd = end < today ? end : today;
 
       // Genera array de días del sprint
       const days = [];
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      for (let d = new Date(start); d <= chartEnd; d.setDate(d.getDate() + 1)) {
         days.push(new Date(d));
       }
 
@@ -339,19 +341,24 @@ export const useProjectsStore = defineStore("projects", {
       // Línea ideal: decrece linealmente de totalHours a 0
       const idealLine = days.map((_, idx) =>
         parseFloat(
-          (totalHours - (totalHours / (days.length - 1)) * idx).toFixed(2),
+          (
+            totalHours -
+            (days.length > 1 ? (totalHours / (days.length - 1)) * idx : 0)
+          ).toFixed(2),
         ),
       );
 
       // Línea real: por cada día, cuántas horas quedaban sin resolver
       const actualLine = days.map((day) => {
+        const dayEnd = new Date(day);
+        dayEnd.setHours(23, 59, 59, 999);
         if (day > today) return null; // días futuros → null
         const resolvedHours = state.sprintIssues
           .filter((i) => {
             const resolved = i.fields.resolutiondate
               ? new Date(i.fields.resolutiondate)
               : null;
-            return resolved && resolved <= day;
+            return resolved && resolved <= dayEnd;
           })
           .reduce((acc, i) => acc + (i.fields.customfield_10043 || 0), 0);
         return parseFloat((totalHours - resolvedHours).toFixed(2));
