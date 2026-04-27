@@ -154,21 +154,21 @@ export const useProjectsStore = defineStore("projects", {
     },
   },
 
-  getters: {
-    // Tabla 1: Est vs Spent por Usuario (Últimos 7 días)
+// Tabla 1: Est vs Spent por Usuario (Current Sprint)
     userTimeStats: (state) => {
-      const lastWeek = new Date();
-      lastWeek.setDate(lastWeek.getDate() - 7);
       const stats = {};
-      state.reportIssues.forEach((issue) => {
-        const updated = new Date(issue.fields.updated);
+      
+      state.sprintIssues.forEach((issue) => {
         const user = issue.fields.assignee?.displayName || "Sin Asignar";
-        if (updated >= lastWeek) {
-          if (!stats[user]) stats[user] = { estimated: 0, spent: 0 };
-          stats[user].estimated += issue.fields.customfield_10043 || 0;
-          stats[user].spent += issue.fields.customfield_10044 || 0;
+        
+        if (!stats[user]) {
+          stats[user] = { estimated: 0, spent: 0 };
         }
+        
+        stats[user].estimated += issue.fields.customfield_10043 || 0;
+        stats[user].spent += issue.fields.customfield_10044 || 0;
       });
+      
       return stats;
     },
 
