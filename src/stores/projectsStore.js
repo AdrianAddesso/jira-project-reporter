@@ -325,11 +325,10 @@ export const useProjectsStore = defineStore("projects", {
       const end = new Date(state.activeSprint.endDate);
       const today = new Date();
       today.setHours(23, 59, 59, 999);
-      const chartEnd = end < today ? end : today;
 
       // Genera array de días del sprint
       const days = [];
-      for (let d = new Date(start); d <= chartEnd; d.setDate(d.getDate() + 1)) {
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         days.push(new Date(d));
       }
 
@@ -352,7 +351,7 @@ export const useProjectsStore = defineStore("projects", {
       const actualLine = days.map((day) => {
         const dayEnd = new Date(day);
         dayEnd.setHours(23, 59, 59, 999);
-        if (day > today) return null; // días futuros → null
+        if (dayEnd > today) return null; // días futuros → null
         const resolvedHours = state.sprintIssues
           .filter((i) => {
             const resolved = i.fields.resolutiondate
