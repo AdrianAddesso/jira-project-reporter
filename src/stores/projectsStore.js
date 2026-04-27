@@ -46,35 +46,48 @@ export const useProjectsStore = defineStore("projects", {
     },
 
     // CASO: Carga masiva para Reportes y KPIs
+    // Usa paginación por cursor (nextPageToken / isLast) — propio de /rest/api/3/search/jql
     async fetchReportData(projectKey) {
       this.loading = true;
       this.error = null;
 
-      // JQL que abarca Bugs, Tasks, Stories y estados críticos
       const jql = `project = "${projectKey}" AND (issuetype IN (Bug, Task, Story) OR status IN ("QA", "Ready for Prod", "QA Failed", "Blocked"))`;
+      const fields = [
+        "summary",
+        "assignee",
+        "status",
+        "issuetype",
+        "updated",
+        "customfield_10043", // Estimation (hs)
+        "customfield_10044", // Time Spent (hs)
+        "customfield_10020", // Sprint
+        "customfield_10077", // Environment
+      ].join(",");
+
+      const PAGE_SIZE = 100;
+      let allIssues = [];
+      let nextPageToken = null;
 
       try {
-        const response = await axios.get(`/api-jira/rest/api/3/search/jql`, {
-          headers: this.getAuthHeader(),
-          params: {
-            jql,
-            maxResults: 1000,
-            fields: [
-              "summary",
-              "assignee",
-              "status",
-              "issuetype",
-              "updated",
-              "customfield_10043", // Estimation (hs)
-              "customfield_10044", // Time Spent (hs)
-              "customfield_10020", // Sprint
-              "customfield_10077", // Environment
-            ].join(","),
-          },
-        });
-        this.reportIssues = response.data.issues;
+        while (true) {
+          const params = { jql, maxResults: PAGE_SIZE, fields };
+          if (nextPageToken) params.nextPageToken = nextPageToken;
+
+          const response = await axios.get(`/api-jira/rest/api/3/search/jql`, {
+            headers: this.getAuthHeader(),
+            params,
+          });
+
+          const { issues, isLast, nextPageToken: token } = response.data;
+          allIssues = allIssues.concat(issues);
+
+          if (isLast || !token) break;
+          nextPageToken = token;
+        }
+
+        this.reportIssues = allIssues;
         // Sincronizamos blockedIssues filtrando del reporte global
-        this.blockedIssues = this.reportIssues.filter(
+        this.blockedIssues = allIssues.filter(
           (i) => i.fields.status.name === "Blocked",
         );
       } catch (err) {
@@ -88,6 +101,8 @@ export const useProjectsStore = defineStore("projects", {
     async fetchBlockedIssues(projectKey) {
       await this.fetchReportData(projectKey);
     },
+
+    // Usa paginación por offset (startAt / total) — propio de /rest/agile/1.0
     async fetchSprintData(boardId = 2) {
       try {
         const sprintRes = await axios.get(
@@ -95,39 +110,39 @@ export const useProjectsStore = defineStore("projects", {
           { headers: this.getAuthHeader() },
         );
 
-        console.log(
-          "🟢 Sprint response:",
-          JSON.stringify(sprintRes.data, null, 2),
-        );
-
         this.activeSprint = sprintRes.data.values?.[0] ?? null;
-
-        console.log("🟡 activeSprint seteado:", this.activeSprint);
 
         if (!this.activeSprint) {
           console.log("🔴 No hay sprint activo, se corta acá");
           return;
         }
 
-        const issuesRes = await axios.get(
-          `/api-jira/rest/agile/1.0/sprint/${this.activeSprint.id}/issue`,
-          {
-            headers: this.getAuthHeader(),
-            params: {
-              fields:
-                "summary,status,assignee,issuetype,customfield_10043,customfield_10044,resolutiondate,updated",
-              maxResults: 500,
+        const PAGE_SIZE = 100;
+        let startAt = 0;
+        let allIssues = [];
+
+        while (true) {
+          const issuesRes = await axios.get(
+            `/api-jira/rest/agile/1.0/sprint/${this.activeSprint.id}/issue`,
+            {
+              headers: this.getAuthHeader(),
+              params: {
+                fields:
+                  "summary,status,assignee,issuetype,customfield_10043,customfield_10044,resolutiondate,updated",
+                maxResults: PAGE_SIZE,
+                startAt,
+              },
             },
-          },
-        );
+          );
 
-        console.log("🟢 Issues count:", issuesRes.data.issues?.length);
-        console.log(
-          "🟡 Primer issue fields:",
-          JSON.stringify(issuesRes.data.issues?.[0]?.fields, null, 2),
-        );
+          const { issues, total } = issuesRes.data;
+          allIssues = allIssues.concat(issues);
+          startAt += issues.length;
 
-        this.sprintIssues = issuesRes.data.issues ?? [];
+          if (startAt >= total || issues.length === 0) break;
+        }
+
+        this.sprintIssues = allIssues;
       } catch (err) {
         console.log(
           "🔴 ERROR en fetchSprintData:",
@@ -166,16 +181,16 @@ export const useProjectsStore = defineStore("projects", {
       ).length,
 
     // Tabla 4: Bug Rate
-    bugRate: (state) => {
-      const bugs = state.reportIssues.filter(
-        (i) => i.fields.issuetype.name === "Bug",
-      );
-      const totalSpent = state.reportIssues.reduce(
-        (acc, i) => acc + (i.fields.customfield_10044 || 0),
-        0,
-      );
-      return totalSpent > 0 ? (bugs.length / totalSpent).toFixed(2) : 0;
-    },
+        bugRate: (state) => {
+        const bugs = state.sprintIssues.filter(
+            (i) => i.fields.issuetype.name === "Bug",
+        );
+        const totalSpent = state.sprintIssues.reduce(
+            (acc, i) => acc + (i.fields.customfield_10044 || 0),
+            0,
+        );
+        return totalSpent > 0 ? (bugs.length / totalSpent).toFixed(2) : 0;
+        },
 
     // Tabla 5: Defect Escape Rate
     defectEscapeRate: (state) => {
@@ -220,15 +235,18 @@ export const useProjectsStore = defineStore("projects", {
 
     // Tabla 8: Accuracy
     estimationAccuracy: (state) => {
-      const targets = state.reportIssues.filter((i) =>
-        ["Task", "Story"].includes(i.fields.issuetype.name),
+      const targets = state.reportIssues.filter(
+        (i) =>
+          ["Task", "Story"].includes(i.fields.issuetype.name) &&
+          i.fields.customfield_10043 != null &&
+          i.fields.customfield_10044 != null,
       );
       const totalEst = targets.reduce(
-        (acc, i) => acc + (i.fields.customfield_10043 || 0),
+        (acc, i) => acc + i.fields.customfield_10043,
         0,
       );
       const totalSpent = targets.reduce(
-        (acc, i) => acc + (i.fields.customfield_10044 || 0),
+        (acc, i) => acc + i.fields.customfield_10044,
         0,
       );
       if (totalEst === 0) return "0%";
@@ -248,6 +266,7 @@ export const useProjectsStore = defineStore("projects", {
       );
       return { totalEst, totalSpent, deviation: totalSpent - totalEst };
     },
+
     burndownData: (state) => {
       if (!state.activeSprint || !state.sprintIssues.length) return null;
 
