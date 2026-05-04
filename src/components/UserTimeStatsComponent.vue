@@ -9,9 +9,10 @@
             </tr>
         </thead>
         <tbody>
-            <tr v-for="(data, user) in store.userTimeStats" :key="user">
-            <td>{{ user }}</td>
-            <td>{{ data.spent }}h</td>
+            <!-- Iterate over the sorted computed array -->
+            <tr v-for="user in sortedUserStats" :key="user.name">
+            <td>{{ user.name }}</td>
+            <td>{{ user.spent }}h</td>
             </tr>
         </tbody>
         </table>
@@ -19,6 +20,15 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useProjectsStore } from '@/stores/projectsStore'
+
 const store = useProjectsStore()
+
+// Create a sorted array from the object
+const sortedUserStats = computed(() => {
+  return Object.entries(store.userTimeStats)
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
 </script>
