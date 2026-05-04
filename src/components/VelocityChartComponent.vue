@@ -25,30 +25,24 @@
     const store = useProjectsStore()
 
     const chartData = computed(() => {
-    const dataMap = store.velocityPerSprint
-    return {
-        labels: Object.keys(dataMap),
-        datasets: [
-        {
-            label: 'Horas Invertidas',
-            backgroundColor: '#0d6efd',
-            data: Object.values(dataMap)
-        }
-        ]
-    }
-    })
+  const dataMap = store.velocityPerSprint
+  
+  // 1. Get and sort the sprint labels (keys)
+  const sortedLabels = Object.keys(dataMap).sort((a, b) => {
+    // Basic alphanumeric sort; if labels are like "Sprint 1", "Sprint 2"
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  })
 
-    const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-        y: {
-        beginAtZero: true,
-        title: { display: true, text: 'Horas (hs)' }
-        }
-    },
-    plugins: {
-        legend: { display: false }
-    }
-}
+  return {
+    labels: sortedLabels,
+    datasets: [
+      {
+        label: 'Horas Invertidas',
+        backgroundColor: '#0d6efd',
+        // 2. Map the data values to match the sorted order
+        data: sortedLabels.map(label => dataMap[label])
+      }
+    ]
+  }
+})
 </script>
