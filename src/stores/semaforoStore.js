@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { SemaforoSheet } from "../models/SemaforoSheet";
 
+const BASE_URL = import.meta.env.VITE_SPRINT_SHEET_URL;
+
 export const useSemaforoStore = defineStore("semaforo", {
     state: () => ({
         comunicacion: [],
@@ -8,13 +10,11 @@ export const useSemaforoStore = defineStore("semaforo", {
     }),
     actions: {
         async fetchComunicacion() {
-        const url = import.meta.env.VITE_COMUNICACION_SHEET_URL;
-        const sheet = new SemaforoSheet(url);
+        const sheet = new SemaforoSheet(BASE_URL, "Comunicacion");
         this.comunicacion = await sheet.getSheetData();
         },
         async fetchRiesgos() {
-        const url = import.meta.env.VITE_RIESGOS_SHEET_URL;
-        const sheet = new SemaforoSheet(url);
+        const sheet = new SemaforoSheet(BASE_URL, "Riesgos");
         this.riesgos = await sheet.getSheetData();
         },
     },

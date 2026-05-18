@@ -1,6 +1,9 @@
 export class SemaforoSheet {
-    constructor(url) {
-        this.url = url;
+    constructor(baseUrl, sheetName) {
+        // Agrega el parámetro de tab a la URL base
+        this.url = sheetName
+        ? `${baseUrl}&sheet=${encodeURIComponent(sheetName)}`
+        : baseUrl;
     }
 
     async getSheetData() {
@@ -22,13 +25,7 @@ export class SemaforoSheet {
 
         if (lines.length < 2) return [];
 
-        // La primera fila son los headers: "Punto del plan", "Estado (Semáforo)"
-        const headers = lines[0].split(",").map((h) => h.trim());
-        const puntoKey = headers[0];
-        const estadoKey = headers[1];
-
         return lines.slice(1).map((line) => {
-        // Split respetando comas dentro de comillas
         const cols = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
         return {
             punto: (cols[0] || "").replace(/^"|"$/g, "").trim(),
