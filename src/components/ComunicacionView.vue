@@ -1,4 +1,3 @@
-<!-- components/ComunicacionView.vue -->
 <template>
     <SemaforoTable
         title="Comunicación"
@@ -22,7 +21,10 @@ onMounted(async () => {
     try {
         loading.value = true;
         await store.fetchComunicacion();
-        items.value = store.getComunicacion;
+        items.value = store.getComunicacion.map(row => ({
+            punto: row["Punto del plan"] ?? "",
+            estado: row["Estado (Semáforo)"] ?? "",
+        }));
     } catch (error) {
         errorData.value = error.message;
     } finally {
