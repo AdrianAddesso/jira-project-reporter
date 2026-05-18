@@ -66,14 +66,13 @@ defineProps({
     },
 });
 
-// Mapea el texto del estado a una clase CSS
+// Mapea los nuevos estados a las clases CSS correspondientes
 const estadoClass = (estado) => {
-    const map = {
-        green:  "estado-green",
-        yellow: "estado-yellow",
-        red:    "estado-red",
-    };
-    return map[(estado || "").toLowerCase()] ?? "estado-unknown";
+    const v = (estado || "").toLowerCase();
+    if (v === "estable") return "estado-green";
+    if (v === "inestable") return "estado-yellow";
+    if (v === "detenido") return "estado-red";
+    return "estado-unknown";
 };
 </script>
 
@@ -119,7 +118,7 @@ th {
     flex-shrink: 0;
 }
 
-/* Estados */
+/* Estados (Mismos colores que tu tabla de riesgos) */
 .estado-green  { background: #d4edda; color: #155724; }
 .estado-green  .semaforo-dot { background: #28a745; }
 
