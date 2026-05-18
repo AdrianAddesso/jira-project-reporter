@@ -1,8 +1,6 @@
 import { defineStore } from "pinia";
 import { SemaforoSheet } from "../models/SemaforoSheet";
 
-const BASE_URL = import.meta.env.VITE_SPRINT_SHEET_URL;
-
 export const useSemaforoStore = defineStore("semaforo", {
     state: () => ({
         comunicacion: [],
@@ -10,11 +8,11 @@ export const useSemaforoStore = defineStore("semaforo", {
     }),
     actions: {
         async fetchComunicacion() {
-        const sheet = new SemaforoSheet(BASE_URL, "Comunicacion");
+        const sheet = new SemaforoSheet("Comunicacion");
         this.comunicacion = await sheet.getSheetData();
         },
         async fetchRiesgos() {
-        const sheet = new SemaforoSheet(BASE_URL, "Riesgos");
+        const sheet = new SemaforoSheet("Riesgos");
         this.riesgos = await sheet.getSheetData();
         },
     },
