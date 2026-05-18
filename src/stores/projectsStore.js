@@ -13,6 +13,10 @@ export const useProjectsStore = defineStore("projects", {
     activeSprint: null,
     sprintIssues: [],
     userTimeStatsIssues: [],
+    allSprints: [],
+    selectedSprint: null,
+    selectedSprintIssues: [],
+    loadingSprintSelector: false,
   }),
 
   actions: {
@@ -203,23 +207,93 @@ export const useProjectsStore = defineStore("projects", {
           "Error al obtener tiempos del sprint activo: " + err.message;
       }
     },
+    async fetchAllSprints(boardId = 2) {
+      this.loadingSprintSelector = true;
+      try {
+        const PAGE_SIZE = 50;
+        let startAt = 0;
+        let allSprints = [];
+
+        while (true) {
+          const res = await axios.get(
+            `/api-jira/rest/agile/1.0/board/${boardId}/sprint`,
+            {
+              headers: this.getAuthHeader(),
+              params: { maxResults: PAGE_SIZE, startAt },
+            },
+          );
+          const { values, isLast } = res.data;
+          allSprints = allSprints.concat(values);
+          startAt += values.length;
+          if (isLast || values.length === 0) break;
+        }
+
+        // Orden cronológico inverso: más reciente primero
+        this.allSprints = allSprints.reverse();
+
+        // Si no hay sprint seleccionado, pre-seleccionar el activo
+        if (!this.selectedSprint && this.activeSprint) {
+          await this.selectSprint(this.activeSprint);
+        }
+      } catch (err) {
+        this.error = "Error al cargar sprints: " + err.message;
+      } finally {
+        this.loadingSprintSelector = false;
+      }
+    },
+
+    // Selecciona un sprint y carga sus issues
+    async selectSprint(sprint) {
+      this.selectedSprint = sprint;
+      this.loadingSprintSelector = true;
+      try {
+        const PAGE_SIZE = 100;
+        let startAt = 0;
+        let allIssues = [];
+
+        while (true) {
+          const res = await axios.get(
+            `/api-jira/rest/agile/1.0/sprint/${sprint.id}/issue`,
+            {
+              headers: this.getAuthHeader(),
+              params: {
+                fields:
+                  "summary,status,assignee,issuetype,customfield_10043,customfield_10044,resolutiondate,updated",
+                maxResults: PAGE_SIZE,
+                startAt,
+              },
+            },
+          );
+          const { issues, total } = res.data;
+          allIssues = allIssues.concat(issues);
+          startAt += issues.length;
+          if (startAt >= total || issues.length === 0) break;
+        }
+
+        this.selectedSprintIssues = allIssues;
+      } catch (err) {
+        this.error = "Error al cargar issues del sprint: " + err.message;
+      } finally {
+        this.loadingSprintSelector = false;
+      }
+    },
   },
 
   getters: {
     // Tabla 1: Spent por Usuario (Current Sprint)
     userTimeStats: (state) => {
       const stats = {};
-      
+
       state.userTimeStatsIssues.forEach((issue) => {
         const user = issue.fields.assignee?.displayName || "Sin Asignar";
-        
+
         if (!stats[user]) {
           stats[user] = { spent: 0 };
         }
-        
+
         stats[user].spent += issue.fields.customfield_10044 || 0;
       });
-      
+
       return stats;
     },
 
@@ -232,16 +306,16 @@ export const useProjectsStore = defineStore("projects", {
       ).length,
 
     // Tabla 4: Bug Rate
-        bugRate: (state) => {
-        const bugs = state.sprintIssues.filter(
-            (i) => i.fields.issuetype.name === "Bug",
-        );
-        const totalSpent = state.sprintIssues.reduce(
-            (acc, i) => acc + (i.fields.customfield_10044 || 0),
-            0,
-        );
-        return totalSpent > 0 ? (bugs.length / totalSpent).toFixed(2) : 0;
-        },
+    bugRate: (state) => {
+      const bugs = state.sprintIssues.filter(
+        (i) => i.fields.issuetype.name === "Bug",
+      );
+      const totalSpent = state.sprintIssues.reduce(
+        (acc, i) => acc + (i.fields.customfield_10044 || 0),
+        0,
+      );
+      return totalSpent > 0 ? (bugs.length / totalSpent).toFixed(2) : 0;
+    },
 
     // Tabla 5: Defect Escape Rate
     defectEscapeRate: (state) => {
@@ -319,25 +393,25 @@ export const useProjectsStore = defineStore("projects", {
     },
 
     burndownData: (state) => {
-      if (!state.activeSprint || !state.sprintIssues.length) return null;
+      const sprint = state.selectedSprint;
+      const issues = state.selectedSprintIssues;
+      if (!sprint || !issues.length) return null;
 
-      const start = new Date(state.activeSprint.startDate);
-      const end = new Date(state.activeSprint.endDate);
+      const start = new Date(sprint.startDate);
+      const end = new Date(sprint.endDate);
       const today = new Date();
       today.setHours(23, 59, 59, 999);
 
-      // Genera array de días del sprint
       const days = [];
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         days.push(new Date(d));
       }
 
-      const totalHours = state.sprintIssues.reduce(
+      const totalHours = issues.reduce(
         (acc, i) => acc + (i.fields.customfield_10043 || 0),
         0,
       );
 
-      // Línea ideal: decrece linealmente de totalHours a 0
       const idealLine = days.map((_, idx) =>
         parseFloat(
           (
@@ -347,12 +421,11 @@ export const useProjectsStore = defineStore("projects", {
         ),
       );
 
-      // Línea real: por cada día, cuántas horas quedaban sin resolver
       const actualLine = days.map((day) => {
         const dayEnd = new Date(day);
         dayEnd.setHours(23, 59, 59, 999);
-        if (dayEnd > today) return null; // días futuros → null
-        const resolvedHours = state.sprintIssues
+        if (dayEnd > today) return null;
+        const resolvedHours = issues
           .filter((i) => {
             const resolved = i.fields.resolutiondate
               ? new Date(i.fields.resolutiondate)
@@ -370,14 +443,14 @@ export const useProjectsStore = defineStore("projects", {
         idealLine,
         actualLine,
         totalHours,
-        sprintName: state.activeSprint.name,
+        sprintName: sprint.name,
       };
     },
 
     // Sprint Health: conteo por categoría de estado
     sprintHealth: (state) => {
       const counts = { todo: 0, inProgress: 0, done: 0, blocked: 0 };
-      state.sprintIssues.forEach((i) => {
+      state.selectedSprintIssues.forEach((i) => {
         const cat = i.fields.status.statusCategory.key;
         const name = i.fields.status.name;
         if (name === "Blocked") counts.blocked++;
@@ -387,10 +460,10 @@ export const useProjectsStore = defineStore("projects", {
       });
       return {
         ...counts,
-        total: state.sprintIssues.length,
-        sprintName: state.activeSprint?.name ?? "",
-        startDate: state.activeSprint?.startDate ?? null,
-        endDate: state.activeSprint?.endDate ?? null,
+        total: state.selectedSprintIssues.length,
+        sprintName: state.selectedSprint?.name ?? "",
+        startDate: state.selectedSprint?.startDate ?? null,
+        endDate: state.selectedSprint?.endDate ?? null,
       };
     },
   },
