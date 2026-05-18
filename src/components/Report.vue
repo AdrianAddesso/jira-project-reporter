@@ -74,7 +74,7 @@
 
             <!-- Section 4: Sprint sheet — full width, centered content -->
             <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Sprint</p>
-            <div class="row g-3">
+            <div class="row g-3 mb-4">
                 <div class="col-12 d-flex justify-content-center">
                     <div class="w-100"><SprintSheet /></div>
                 </div>
