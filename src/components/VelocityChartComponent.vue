@@ -1,7 +1,7 @@
 <template>
     <div class="card shadow-sm">
         <div class="card-header bg-white">
-        <h6 class="mb-0 title"><b>Velocity (Time Spent per Sprint)</b></h6>
+        <h6 class="mb-0 title"><b>Velocity ({{ averageHours }} hs/Sprint)</b></h6>
         </div>
         <div class="card-body">
         <div style="height: 300px;">
@@ -10,9 +10,9 @@
         </div>
         </div>
     </div>
-    </template>
+</template>
 
-    <script setup>
+<script setup>
     import { computed } from 'vue'
     import { useProjectsStore } from '@/stores/projectsStore'
     import { Bar } from 'vue-chartjs'
@@ -24,25 +24,34 @@
 
     const store = useProjectsStore()
 
-    const chartData = computed(() => {
-  const dataMap = store.velocityPerSprint
-  
-  // 1. Get and sort the sprint labels (keys)
-  const sortedLabels = Object.keys(dataMap).sort((a, b) => {
-    // Basic alphanumeric sort; if labels are like "Sprint 1", "Sprint 2"
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
-  })
+    // Nueva variable computada para el promedio
+    const averageHours = computed(() => {
+        const dataMap = store.velocityPerSprint
+        const values = Object.values(dataMap)
+        
+        if (values.length === 0) return 0
+        
+        const total = values.reduce((sum, val) => sum + (Number(val) || 0), 0)
+        // Retorna el promedio redondeado a un decimal (puedes ajustarlo si lo prefieres entero)
+        return (total / values.length).toFixed(1)
+    })
 
-  return {
-    labels: sortedLabels,
-    datasets: [
-      {
-        label: 'Horas Invertidas',
-        backgroundColor: '#0d6efd',
-        // 2. Map the data values to match the sorted order
-        data: sortedLabels.map(label => dataMap[label])
-      }
-    ]
-  }
-})
+    const chartData = computed(() => {
+        const dataMap = store.velocityPerSprint
+  
+        const sortedLabels = Object.keys(dataMap).sort((a, b) => {
+            return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+        })
+
+        return {
+            labels: sortedLabels,
+            datasets: [
+                {
+                    label: 'Horas Invertidas',
+                    backgroundColor: '#0d6efd',
+                    data: sortedLabels.map(label => dataMap[label])
+                }
+            ]
+        }
+    })
 </script>

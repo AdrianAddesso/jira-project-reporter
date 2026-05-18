@@ -1,7 +1,7 @@
 <template>
     <div class="card shadow-sm h-100">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><b>Sprint Health</b></h6>
+            <h6 class="mb-0"><b>Estado del Sprint</b></h6>
             <small class="text-muted">{{ health.sprintName }}</small>
         </div>
         <div class="card-body">
@@ -9,7 +9,7 @@
                 <div class="col-6">
                     <div class="p-3 rounded-3 text-center" style="background:#f8f9fa">
                         <div class="fs-4 fw-bold text-secondary">{{ health.todo }}</div>
-                        <div class="small text-muted">Por hacer</div>
+                        <div class="small text-muted">Pendientes</div>
                     </div>
                 </div>
                 <div class="col-6">

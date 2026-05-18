@@ -74,12 +74,27 @@
 
             <!-- Section 4: Sprint sheet — full width, centered content -->
             <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Sprint</p>
-            <div class="row g-3">
+            <div class="row g-3 mb-4">
                 <div class="col-12 d-flex justify-content-center">
                     <div class="w-100"><SprintSheet /></div>
                 </div>
             </div>
 
+            <!-- Section 5: Comunicación -->     <!-- ← NUEVO -->
+            <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Comunicación</p>
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <ComunicacionView />
+                </div>
+            </div>
+
+            <!-- Section 6: Riesgos -->          <!-- ← NUEVO -->
+            <p class="text-muted small text-uppercase fw-semibold letter-spacing-1 mb-2">Riesgos</p>
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <RiesgosView />
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -100,6 +115,8 @@ import ProjectDeviationComponent from './ProjectDeviationComponent.vue'
 import SprintSheet from './SprintSheet.vue'
 import BurndownChartComponent from './BurndownChartComponent.vue'
 import SprintHealthComponent from './SprintHealthComponent.vue'
+import ComunicacionView from './ComunicacionView.vue'
+import RiesgosView from './RiesgosView.vue'
 
 const store = useProjectsStore()
 const reportContent = ref(null)
