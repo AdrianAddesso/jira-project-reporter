@@ -9,11 +9,15 @@ export const useSemaforoStore = defineStore("semaforo", {
     actions: {
         async fetchComunicacion() {
         const sheet = new SemaforoSheet("comunicacion");
-        this.comunicacion = await sheet.getSheetData();
+        const result = await sheet.getSheetData();
+        console.log("fetchComunicacion result:", result);
+        this.comunicacion = result;
         },
         async fetchRiesgos() {
         const sheet = new SemaforoSheet("riesgos");
-        this.riesgos = await sheet.getSheetData();
+        const result = await sheet.getSheetData();
+        console.log("fetchRiesgos result:", result);
+        this.riesgos = result;
         },
     },
     getters: {
