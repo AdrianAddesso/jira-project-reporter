@@ -1,6 +1,5 @@
 export class SemaforoSheet {
     constructor(key) {
-        // key = "comunicacion" | "riesgos"
         this.key = key;
         this.url = `/api/sheet-proxy`;
     }
@@ -8,13 +7,20 @@ export class SemaforoSheet {
     async getSheetData() {
         try {
         const response = await fetch(this.url);
-        if (!response.ok) throw new Error(`Error ${response.status}`);
+
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}`);
+        }
+
         const data = await response.json();
+
+        console.log("Proxy response keys:", Object.keys(data));
+        console.log("Buscando key " + this.key + ":", data[this.key]);
 
         const rows = data[this.key];
 
         if (!Array.isArray(rows)) {
-            console.error(`Key "${this.key}" no encontrada o no es array`, data);
+            console.error("Key no es array:", rows);
             return [];
         }
 
@@ -24,4 +30,4 @@ export class SemaforoSheet {
         throw error;
         }
     }
-}
+    }
