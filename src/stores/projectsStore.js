@@ -299,10 +299,10 @@ export const useProjectsStore = defineStore("projects", {
 
     // Tablas 2 y 3: Conteos de Status
     qaCount: (state) =>
-      state.reportIssues.filter((i) => i.fields.status.name === "In QA").length,
+      state.sprintIssues.filter((i) => i.fields.status.name === "PR Review").length,
     readyForProdCount: (state) =>
-      state.reportIssues.filter(
-        (i) => i.fields.status.name === "Ready for Prod",
+      state.sprintIssues.filter(
+        (i) => i.fields.status.name === "Done",
       ).length,
 
     // Tabla 4: Bug Rate
@@ -360,7 +360,7 @@ export const useProjectsStore = defineStore("projects", {
 
     // Tabla 8: Accuracy
     estimationAccuracy: (state) => {
-      const targets = state.reportIssues.filter(
+      const targets = state.sprintIssues.filter(
         (i) =>
           ["Task", "Story"].includes(i.fields.issuetype.name) &&
           i.fields.customfield_10043 != null &&
