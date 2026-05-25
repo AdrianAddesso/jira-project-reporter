@@ -299,11 +299,10 @@ export const useProjectsStore = defineStore("projects", {
 
     // Tablas 2 y 3: Conteos de Status
     qaCount: (state) =>
-      state.sprintIssues.filter((i) => i.fields.status.name === "PR Review").length,
+      state.sprintIssues.filter((i) => i.fields.status.name === "PR Review")
+        .length,
     readyForProdCount: (state) =>
-      state.sprintIssues.filter(
-        (i) => i.fields.status.name === "Done",
-      ).length,
+      state.sprintIssues.filter((i) => i.fields.status.name === "Done").length,
 
     // Tabla 4: Bug Rate
     bugRate: (state) => {
@@ -360,23 +359,24 @@ export const useProjectsStore = defineStore("projects", {
 
     // Tabla 8: Accuracy
     estimationAccuracy: (state) => {
-      const targets = state.sprintIssues.filter(
-        (i) =>
-          ["Task", "Story"].includes(i.fields.issuetype.name) &&
-          i.fields.customfield_10043 != null &&
-          i.fields.customfield_10044 != null,
-      );
-      const totalEst = targets.reduce(
-        (acc, i) => acc + i.fields.customfield_10043,
-        0,
-      );
-      const totalSpent = targets.reduce(
-        (acc, i) => acc + i.fields.customfield_10044,
-        0,
-      );
-      if (totalEst === 0) return "0%";
-      const accuracy = (1 - Math.abs(totalEst - totalSpent) / totalEst) * 100;
-      return Math.max(0, accuracy).toFixed(2) + "%";
+        const targets = state.sprintIssues.filter(
+            (i) =>
+            ["Task", "Story"].includes(i.fields.issuetype.name) &&
+            i.fields.status.name === "Done" &&
+            i.fields.customfield_10043 != null &&
+            i.fields.customfield_10044 != null,
+        );
+        const totalEst = targets.reduce(
+            (acc, i) => acc + i.fields.customfield_10043,
+            0,
+        );
+        const totalSpent = targets.reduce(
+            (acc, i) => acc + i.fields.customfield_10044,
+            0,
+        );
+        if (totalEst === 0) return "0%";
+        const accuracy = (1 - Math.abs(totalEst - totalSpent) / totalEst) * 100;
+        return Math.max(0, accuracy).toFixed(2) + "%";
     },
 
     // Tabla 9: Desvío Acumulado
