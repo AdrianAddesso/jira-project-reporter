@@ -1,6 +1,6 @@
 <template>
     <div class="card">
-        <div class="card-header bg-dark text-white"><b>Acumulado A vs B (Desvío)</b></div>
+        <div class="card-header bg-dark text-white"><b>Control de Desvío</b></div>
         <div class="card-body p-0">
         <table class="table mb-0">
             <tbody>
@@ -13,7 +13,7 @@
                 <td class="text-end">{{ store.projectDeviation.totalSpent }}h</td>
             </tr>
             <tr class="table-warning">
-                <th>Desvío Total</th>
+                <th>Delta</th>
                 <th class="text-end" :class="store.projectDeviation.deviation > 0 ? 'text-danger' : 'text-success'">
                 {{ store.projectDeviation.deviation }}h
                 </th>
