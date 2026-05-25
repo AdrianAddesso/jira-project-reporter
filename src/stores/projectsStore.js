@@ -467,4 +467,4 @@ export const useProjectsStore = defineStore("projects", {
       };
     },
   },
-);
+});
