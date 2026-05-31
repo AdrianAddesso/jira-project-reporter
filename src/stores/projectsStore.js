@@ -331,19 +331,18 @@ export const useProjectsStore = defineStore("projects", {
         : "0%";
     },
 
-    // Tabla 6: QA Pass Rate (Bugs vs Tasks across all sprints)
+    // Tabla 6: QA Pass Rate
     qaPassRate: (state) => {
-      const totalBugs = state.reportIssues.filter(
-        (i) => i.fields.issuetype.name === "Bug",
-      ).length;
-      // Note: Added "Story" here as well assuming you group them, remove it if you strictly meant only "Task"
-      const totalTasks = state.reportIssues.filter((i) =>
-        ["Task", "Story"].includes(i.fields.issuetype.name),
-      ).length;
+        const totalBugs = state.reportIssues.filter(
+            (i) => i.fields.issuetype.name === "Bug",
+        ).length;
+        const totalTasks = state.reportIssues.filter((i) =>
+            ["Task", "Story"].includes(i.fields.issuetype.name),
+        ).length;
 
-      return totalTasks > 0
-        ? ((totalBugs / totalTasks) * 100).toFixed(2) + "%"
-        : "0%";
+        return totalTasks > 0
+            ? (((totalTasks - totalBugs) / totalTasks) * 100).toFixed(2) + "%"
+            : "0%";
     },
 
     // Tabla 7: Velocity (Only Task & Story)
@@ -398,7 +397,8 @@ export const useProjectsStore = defineStore("projects", {
       return { totalEst, totalSpent, deviation: totalSpent - totalEst };
     },
 
-    bburndownData: (state) => {
+    
+    burndownData: (state) => {
       const sprint = state.selectedSprint;
       const issues = state.selectedSprintIssues.filter((i) =>
         ["Task", "Story"].includes(i.fields.issuetype.name),
