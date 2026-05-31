@@ -331,23 +331,29 @@ export const useProjectsStore = defineStore("projects", {
         : "0%";
     },
 
-    // Tabla 6: QA Pass Rate
+    // Tabla 6: QA Pass Rate (Bugs vs Tasks across all sprints)
     qaPassRate: (state) => {
-      const targets = state.reportIssues.filter((i) =>
-        ["Task", "Story"].includes(i.fields.issuetype.name),
-      );
-      const failed = targets.filter(
-        (i) => i.fields.status.name === "QA Failed",
+      const totalBugs = state.reportIssues.filter(
+        (i) => i.fields.issuetype.name === "Bug",
       ).length;
-      return targets.length > 0
-        ? (((targets.length - failed) / targets.length) * 100).toFixed(2) + "%"
-        : "100%";
+      // Note: Added "Story" here as well assuming you group them, remove it if you strictly meant only "Task"
+      const totalTasks = state.reportIssues.filter((i) =>
+        ["Task", "Story"].includes(i.fields.issuetype.name),
+      ).length;
+
+      return totalTasks > 0
+        ? ((totalBugs / totalTasks) * 100).toFixed(2) + "%"
+        : "0%";
     },
 
-    // Tabla 7: Velocity
+    // Tabla 7: Velocity (Only Task & Story)
     velocityPerSprint: (state) => {
       const sprints = {};
-      state.reportIssues.forEach((issue) => {
+      const validIssues = state.reportIssues.filter((i) =>
+        ["Task", "Story"].includes(i.fields.issuetype.name),
+      );
+
+      validIssues.forEach((issue) => {
         const sprintName = issue.fields.customfield_10020?.[0]?.name;
         if (sprintName) {
           sprints[sprintName] =
@@ -359,24 +365,24 @@ export const useProjectsStore = defineStore("projects", {
 
     // Tabla 8: Accuracy
     estimationAccuracy: (state) => {
-        const targets = state.sprintIssues.filter(
-            (i) =>
-            ["Task", "Story"].includes(i.fields.issuetype.name) &&
-            i.fields.status.name === "Done" &&
-            i.fields.customfield_10043 != null &&
-            i.fields.customfield_10044 != null,
-        );
-        const totalEst = targets.reduce(
-            (acc, i) => acc + i.fields.customfield_10043,
-            0,
-        );
-        const totalSpent = targets.reduce(
-            (acc, i) => acc + i.fields.customfield_10044,
-            0,
-        );
-        if (totalEst === 0) return "0%";
-        const accuracy = (1 - Math.abs(totalEst - totalSpent) / totalEst) * 100;
-        return Math.max(0, accuracy).toFixed(2) + "%";
+      const targets = state.sprintIssues.filter(
+        (i) =>
+          ["Task", "Story"].includes(i.fields.issuetype.name) &&
+          i.fields.status.name === "Done" &&
+          i.fields.customfield_10043 != null &&
+          i.fields.customfield_10044 != null,
+      );
+      const totalEst = targets.reduce(
+        (acc, i) => acc + i.fields.customfield_10043,
+        0,
+      );
+      const totalSpent = targets.reduce(
+        (acc, i) => acc + i.fields.customfield_10044,
+        0,
+      );
+      if (totalEst === 0) return "0%";
+      const accuracy = (1 - Math.abs(totalEst - totalSpent) / totalEst) * 100;
+      return Math.max(0, accuracy).toFixed(2) + "%";
     },
 
     // Tabla 9: Desvío Acumulado
@@ -392,9 +398,12 @@ export const useProjectsStore = defineStore("projects", {
       return { totalEst, totalSpent, deviation: totalSpent - totalEst };
     },
 
-    burndownData: (state) => {
+    bburndownData: (state) => {
       const sprint = state.selectedSprint;
-      const issues = state.selectedSprintIssues;
+      const issues = state.selectedSprintIssues.filter((i) =>
+        ["Task", "Story"].includes(i.fields.issuetype.name),
+      );
+
       if (!sprint || !issues.length) return null;
 
       const start = new Date(sprint.startDate);
@@ -448,9 +457,14 @@ export const useProjectsStore = defineStore("projects", {
     },
 
     // Sprint Health: conteo por categoría de estado
+    // Sprint Health: conteo por categoría de estado (Only Task & Story)
     sprintHealth: (state) => {
       const counts = { todo: 0, inProgress: 0, done: 0, blocked: 0 };
-      state.selectedSprintIssues.forEach((i) => {
+      const issues = state.selectedSprintIssues.filter((i) =>
+        ["Task", "Story"].includes(i.fields.issuetype.name),
+      );
+
+      issues.forEach((i) => {
         const cat = i.fields.status.statusCategory.key;
         const name = i.fields.status.name;
         if (name === "Blocked") counts.blocked++;
@@ -458,9 +472,10 @@ export const useProjectsStore = defineStore("projects", {
         else if (cat === "indeterminate") counts.inProgress++;
         else if (cat === "done") counts.done++;
       });
+
       return {
         ...counts,
-        total: state.selectedSprintIssues.length,
+        total: issues.length,
         sprintName: state.selectedSprint?.name ?? "",
         startDate: state.selectedSprint?.startDate ?? null,
         endDate: state.selectedSprint?.endDate ?? null,
