@@ -321,14 +321,17 @@ export const useProjectsStore = defineStore("projects", {
       const totalBugs = state.reportIssues.filter(
         (i) => i.fields.issuetype.name === "Bug",
       ).length;
+      console.log("Total Bugs:", totalBugs);
       const prodBugs = state.reportIssues.filter(
         (i) =>
           i.fields.issuetype.name === "Bug" &&
           i.fields.customfield_10077?.value === "Prod",
       ).length;
+      console.log("Prod Bugs:", prodBugs);
       return totalBugs > 0
         ? ((prodBugs / totalBugs) * 100).toFixed(2) + "%"
         : "0%";
+        console.log("Defect Escape Rate:", totalBugs, prodBugs);
     },
 
     // Tabla 6: QA Pass Rate
