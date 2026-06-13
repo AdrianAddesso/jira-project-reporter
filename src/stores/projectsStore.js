@@ -324,7 +324,7 @@ export const useProjectsStore = defineStore("projects", {
       const prodBugs = state.reportIssues.filter(
         (i) =>
           i.fields.issuetype.name === "Bug" &&
-          i.fields.customfield_10077?.value === "Production",
+          i.fields.customfield_10077?.value === "Prod",
       ).length;
       return totalBugs > 0
         ? ((prodBugs / totalBugs) * 100).toFixed(2) + "%"
